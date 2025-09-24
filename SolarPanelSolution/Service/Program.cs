@@ -28,9 +28,11 @@ namespace Service
                 Console.WriteLine("Servis pokrenut na: net.tcp://localhost:4000/SolarService");
                 Console.WriteLine("Pritisni bilo koji taster za zatvaranje servisa...");
                 Console.ReadKey();
+                host.Close();
             }
 
             Console.WriteLine("Servis zatvoren.");
+            Console.ReadKey();
         }
     }
 }

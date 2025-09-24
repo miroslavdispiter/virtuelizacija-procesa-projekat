@@ -1,6 +1,7 @@
 ﻿using Common;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.ServiceModel;
@@ -16,6 +17,7 @@ namespace Service
         private SessionFileWriter sessionWriter;
         private RejectFileWriter rejectWriter;
         private int receivedCount;
+        private double? lastDcVolt = null;
 
         public delegate void TransferStartedHandler(object sender, EventArgs e);
         public delegate void SampleReceivedHandler(object sender, SampleEventArgs e);
@@ -26,6 +28,18 @@ namespace Service
         public event SampleReceivedHandler OnSampleReceived;
         public event TransferCompletedHandler OnTransferCompleted;
         public event WarningRaisedHandler OnWarningRaised;
+
+        private double OverTempThreshold =>
+            double.Parse(ConfigurationManager.AppSettings["OverTempThreshold"] ?? "70");
+
+        private double PowerSpikeThreshold =>
+            double.Parse(ConfigurationManager.AppSettings["PowerSpikeThreshold"] ?? "500");
+
+        private double DcSagThreshold =>
+            double.Parse(ConfigurationManager.AppSettings["DcSagThreshold"] ?? "50");
+
+        private double EfficiencyThreshold =>
+            double.Parse(ConfigurationManager.AppSettings["EfficiencyThreshold"] ?? "0.5");
 
         public bool StartSession(PvMeta meta)
         {
@@ -50,8 +64,8 @@ namespace Service
             rejectWriter = new RejectFileWriter(rejectsPath);
 
             Console.WriteLine($"\nSession started: {meta} | Folder: {dateDir}");
-
             OnTransferStarted?.Invoke(this, EventArgs.Empty);
+
             return true;
         }
 
@@ -70,8 +84,45 @@ namespace Service
             }
 
             sessionWriter?.WriteSample(sample);
-
             OnSampleReceived?.Invoke(this, new SampleEventArgs(sample));
+
+
+            if (sample.Temper > OverTempThreshold)
+                OnWarningRaised?.Invoke(this,
+                    new WarningEventArgs($"OverTempWarning: {sample.Temper}°C > {OverTempThreshold}°C"));
+
+            if (sample.AcPwrt > PowerSpikeThreshold)
+                OnWarningRaised?.Invoke(this,
+                    new WarningEventArgs($"PowerSpikeWarning: AC Power {sample.AcPwrt}W > {PowerSpikeThreshold}W"));
+
+            if (Math.Abs(sample.DcVolt - 32767.0) < 0.0001)
+                OnWarningRaised?.Invoke(this,
+                    new WarningEventArgs("DcSentinelWarning: DCVolt = 32767 (nema valjanih podataka)"));
+
+            if (sample.DcVolt == 0 && sample.AcPwrt > 0)
+                OnWarningRaised?.Invoke(this,
+                    new WarningEventArgs("DcFaultWarning: DCVolt == 0 dok AcPwrt > 0"));
+
+            if (lastDcVolt.HasValue)
+            {
+                double delta = Math.Abs(sample.DcVolt - lastDcVolt.Value);
+                if (delta > DcSagThreshold)
+                {
+                    OnWarningRaised?.Invoke(this,
+                        new WarningEventArgs($"DCSagWarning: Promena DC napona Δ{delta:F2}V > {DcSagThreshold}V"));
+                }
+            }
+            lastDcVolt = sample.DcVolt;
+
+            double expectedPower = sample.AcVlt1 * sample.AcCur1;
+            if (expectedPower > 0)
+            {
+                double efficiency = sample.AcPwrt / expectedPower;
+                if (efficiency < EfficiencyThreshold)
+                    OnWarningRaised?.Invoke(this,
+                        new WarningEventArgs($"LowEfficiencyWarning: η={efficiency:P1} < prag {EfficiencyThreshold:P0}"));
+            }
+
             return true;
         }
 
@@ -88,8 +139,8 @@ namespace Service
             rejectWriter = null;
 
             currentMeta = null;
-
             OnTransferCompleted?.Invoke(this, EventArgs.Empty);
+
             return true;
         }
     }

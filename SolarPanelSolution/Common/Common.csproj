@@ -52,6 +52,8 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PvMeta.cs" />
     <Compile Include="PvSample.cs" />
+    <Compile Include="SampleValidator.cs" />
+    <Compile Include="ValidationResult.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

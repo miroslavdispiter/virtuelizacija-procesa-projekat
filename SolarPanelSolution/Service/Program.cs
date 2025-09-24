@@ -15,6 +15,12 @@ namespace Service
             Console.Title = "Solar Service Host";
 
             SolarService service = new SolarService();
+            ServiceEventListener listener = new ServiceEventListener();
+
+            service.OnTransferStarted += listener.OnTransferStarted;
+            service.OnSampleReceived += listener.OnSampleReceived;
+            service.OnTransferCompleted += listener.OnTransferCompleted;
+            service.OnWarningRaised += listener.OnWarningRaised;
 
             using (ServiceHost host = new ServiceHost(service))
             {

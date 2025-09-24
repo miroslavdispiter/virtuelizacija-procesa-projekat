@@ -17,10 +17,19 @@ namespace Service
         private RejectFileWriter rejectWriter;
         private int receivedCount;
 
+        public delegate void TransferStartedHandler(object sender, EventArgs e);
+        public delegate void SampleReceivedHandler(object sender, SampleEventArgs e);
+        public delegate void TransferCompletedHandler(object sender, EventArgs e);
+        public delegate void WarningRaisedHandler(object sender, WarningEventArgs e);
+
+        public event TransferStartedHandler OnTransferStarted;
+        public event SampleReceivedHandler OnSampleReceived;
+        public event TransferCompletedHandler OnTransferCompleted;
+        public event WarningRaisedHandler OnWarningRaised;
+
         public bool StartSession(PvMeta meta)
         {
-            if (meta == null)
-                return false;
+            if (meta == null) return false;
 
             currentMeta = meta;
             receivedCount = 0;
@@ -40,7 +49,9 @@ namespace Service
 
             rejectWriter = new RejectFileWriter(rejectsPath);
 
-            Console.WriteLine($"\nSesija startovana: {meta}\nFajlovi: {sessionPath}, {rejectsPath}\n");
+            Console.WriteLine($"\nSession started: {meta} | Folder: {dateDir}");
+
+            OnTransferStarted?.Invoke(this, EventArgs.Empty);
             return true;
         }
 
@@ -54,19 +65,19 @@ namespace Service
             if (!validation.IsValid)
             {
                 rejectWriter?.WriteRejected(sample, validation.ErrorMessage);
-                Console.WriteLine($"Red odbijen (RowIndex={sample.RowIndex}): {validation.ErrorMessage}");
+                OnWarningRaised?.Invoke(this, new WarningEventArgs(validation.ErrorMessage));
                 return false;
             }
 
             sessionWriter?.WriteSample(sample);
-            Console.WriteLine($"Red snimljen (RowIndex={sample.RowIndex})");
 
+            OnSampleReceived?.Invoke(this, new SampleEventArgs(sample));
             return true;
         }
 
         public bool EndSession()
         {
-            Console.WriteLine($"\nSesija zavrsena. Ukupno primljeno redova: {receivedCount}\n");
+            Console.WriteLine($"\nPrenos završen. Ukupno primljeno {receivedCount} redova.\n");
 
             sessionWriter?.Flush();
             sessionWriter?.Dispose();
@@ -77,6 +88,8 @@ namespace Service
             rejectWriter = null;
 
             currentMeta = null;
+
+            OnTransferCompleted?.Invoke(this, EventArgs.Empty);
             return true;
         }
     }

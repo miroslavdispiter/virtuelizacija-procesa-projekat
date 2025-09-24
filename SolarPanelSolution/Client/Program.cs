@@ -29,12 +29,15 @@ namespace Client
                     foreach (var sample in samples)
                     {
                         sentCount++;
-                        Console.WriteLine($"Šaljem red {sentCount}/{meta.RowLimitN}...");
+                        double percent = (100.0 * sentCount) / meta.RowLimitN;
+                        Console.WriteLine($"Šaljem red {sentCount}/{meta.RowLimitN} ({percent:F1}%)...");
                         proxy.PushSample(sample);
                     }
 
                     proxy.EndSession();
                     ((IClientChannel)proxy).Dispose();
+
+                    Console.WriteLine("\nPrenos završen. Svi uzorci uspješno poslati serveru.");
                 }
                 catch (Exception ex)
                 {
@@ -43,7 +46,7 @@ namespace Client
                 }
             }
 
-            Console.WriteLine("\nKlijent je završio rad.");
+            Console.WriteLine("\nKlijent završio rad.");
         }
     }
 }

@@ -12,8 +12,6 @@ namespace Service
     {
         static void Main(string[] args)
         {
-            Console.Title = "Solar Service Host";
-
             SolarService service = new SolarService();
             ServiceEventListener listener = new ServiceEventListener();
 

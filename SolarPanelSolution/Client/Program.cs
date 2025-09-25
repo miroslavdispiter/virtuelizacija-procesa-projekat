@@ -30,6 +30,13 @@ namespace Client
                 foreach (var sample in samples)
                 {
                     sentCount++;
+
+                    // TASK 4: Simulacija prekida
+                    /*if (sentCount == 10)
+                    {
+                        Console.WriteLine("Simulacija prekida! Gasim klijenta...");
+                        break; 
+                    }*/
                     Console.WriteLine($"Saljem red {sentCount} / {meta.RowLimitN}...");
                     proxy.PushSample(sample);
                 }

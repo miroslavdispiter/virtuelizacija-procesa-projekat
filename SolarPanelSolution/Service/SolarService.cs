@@ -116,7 +116,7 @@ namespace Service
                 double delta = Math.Abs(sample.DcVolt - lastDcVolt.Value);
                 if (delta > DcSagThreshold)
                 {
-                    OnWarningRaised?.Invoke(this, new WarningEventArgs($"DCSagWarning: Nagla promena DC napona! ΔDCVolt={delta:F2}V > {DcSagThreshold}V"));
+                    OnWarningRaised?.Invoke(this, new WarningEventArgs($"DCSagWarning: Nagla promena DC napona! DCVolt={delta:F2}V > {DcSagThreshold}V"));
                 }
             }
 

@@ -12,41 +12,44 @@ namespace Client
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Klijent započeo rad...\n");
+            Console.WriteLine("Klijent zapoceo sa radom!\n");
 
             using (ChannelFactory<ISolarService> factory = new ChannelFactory<ISolarService>("SolarServiceEndpoint"))
             {
                 ISolarService proxy = factory.CreateChannel();
-                try
+
+                PvMeta meta = new PvMeta("session1", 5, "1.0", 250);
+                proxy.StartSession(meta);
+
+                string csvPath = "Data/FPV_Altamonte_FL_data.csv";
+                var samples = CsvSampleReader.ReadSamples(csvPath, meta.RowLimitN);
+
+                int sentCount = 0;
+                Console.WriteLine("\n");
+
+                foreach (var sample in samples)
                 {
-                    var meta = new PvMeta("session1", 5, "1.0", 20);
-                    proxy.StartSession(meta);
-
-                    string csvPath = "Data/FPV_Altamonte_FL_data.csv";
-                    var samples = CsvSampleReader.ReadSamples(csvPath, meta.RowLimitN);
-
-                    int sentCount = 0;
-                    foreach (var sample in samples)
-                    {
-                        sentCount++;
-                        double percent = (100.0 * sentCount) / meta.RowLimitN;
-                        Console.WriteLine($"Šaljem red {sentCount}/{meta.RowLimitN} ({percent:F1}%)...");
-                        proxy.PushSample(sample);
-                    }
-
-                    proxy.EndSession();
-                    ((IClientChannel)proxy).Dispose();
-
-                    Console.WriteLine("\nPrenos završen. Svi uzorci uspješno poslati serveru.");
+                    sentCount++;
+                    Console.WriteLine($"Saljem red {sentCount} / {meta.RowLimitN}...");
+                    proxy.PushSample(sample);
                 }
-                catch (Exception ex)
+                Console.WriteLine("\nSvi redovi su uspesno poslati serveru.\n");
+
+                // DEO ZA TASK 4
+                /*for (int i = 1; i <= 3; i++)
                 {
-                    Console.WriteLine("Greška u prenosu: " + ex.Message);
-                    ((IClientChannel)proxy)?.Abort();
-                }
+                    PvSample sample = new PvSample(day: i, hour: i, acPwrt: 100 + i, dcVolt: 600 + i, 
+                                                    temper: 25 + i, vlt1to2: 220, vlt2to3: 220, 
+                                                    vlt3to1: 220, acCur1: 10, acVlt1: 230, rowIndex: i);
+                    proxy.PushSample(sample);
+                }*/
+
+                proxy.EndSession();
+                ((IClientChannel)proxy).Dispose();
+
             }
-
-            Console.WriteLine("\nKlijent završio rad.");
+            Console.WriteLine("Klijent je zavrsio sa radom.");
+            Console.ReadKey();
         }
     }
 }

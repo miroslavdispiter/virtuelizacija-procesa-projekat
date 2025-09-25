@@ -43,7 +43,8 @@ namespace Service
 
         public bool StartSession(PvMeta meta)
         {
-            if (meta == null) return false;
+            if (meta == null) 
+                return false;
 
             currentMeta = meta;
             receivedCount = 0;
@@ -72,7 +73,10 @@ namespace Service
         public bool PushSample(PvSample sample)
         {
             receivedCount++;
-            Console.WriteLine($"Primljen red {receivedCount} / {currentMeta.RowLimitN}");
+
+            double percent = (currentMeta != null && currentMeta.RowLimitN > 0) ? (100.0 * receivedCount / currentMeta.RowLimitN) : 0;
+
+            Console.WriteLine($"Primljen red {receivedCount} / {currentMeta.RowLimitN} ({percent:F1}%)");
 
             var validation = SampleValidator.Validate(sample);
 
@@ -95,32 +99,40 @@ namespace Service
                 OnWarningRaised?.Invoke(this,
                     new WarningEventArgs($"PowerSpikeWarning: AC Power {sample.AcPwrt}W > {PowerSpikeThreshold}W"));
 
+            // --- TASK 9: Analitika 1 (DC napon i prekidi) ---
             if (Math.Abs(sample.DcVolt - 32767.0) < 0.0001)
+            {
                 OnWarningRaised?.Invoke(this,
-                    new WarningEventArgs("DcSentinelWarning: DCVolt = 32767 (nema valjanih podataka)"));
+                    new WarningEventArgs("DcSentinelWarning: DCVolt = 32767 (nema validnih podataka)"));
+            }
 
             if (sample.DcVolt == 0 && sample.AcPwrt > 0)
-                OnWarningRaised?.Invoke(this,
-                    new WarningEventArgs("DcFaultWarning: DCVolt == 0 dok AcPwrt > 0"));
+            {
+                OnWarningRaised?.Invoke(this, new WarningEventArgs("DcFaultWarning: DCVolt == 0 dok AC Power > 0"));
+            }
 
             if (lastDcVolt.HasValue)
             {
                 double delta = Math.Abs(sample.DcVolt - lastDcVolt.Value);
                 if (delta > DcSagThreshold)
                 {
-                    OnWarningRaised?.Invoke(this,
-                        new WarningEventArgs($"DCSagWarning: Promena DC napona Δ{delta:F2}V > {DcSagThreshold}V"));
+                    OnWarningRaised?.Invoke(this, new WarningEventArgs($"DCSagWarning: Nagla promena DC napona! ΔDCVolt={delta:F2}V > {DcSagThreshold}V"));
                 }
             }
+
             lastDcVolt = sample.DcVolt;
 
+
+            // --- TASK 10: Analitika 2 (Efikasnost) ---
             double expectedPower = sample.AcVlt1 * sample.AcCur1;
             if (expectedPower > 0)
             {
-                double efficiency = sample.AcPwrt / expectedPower;
-                if (efficiency < EfficiencyThreshold)
-                    OnWarningRaised?.Invoke(this,
-                        new WarningEventArgs($"LowEfficiencyWarning: η={efficiency:P1} < prag {EfficiencyThreshold:P0}"));
+                double efficiencyRatio = sample.AcPwrt / expectedPower;
+
+                if (efficiencyRatio < EfficiencyThreshold)
+                {
+                    OnWarningRaised?.Invoke(this, new WarningEventArgs($"LowEfficiencyWarning: Efikasnost {efficiencyRatio:P1} < prag {EfficiencyThreshold:P0}"));
+                }
             }
 
             return true;
@@ -128,7 +140,7 @@ namespace Service
 
         public bool EndSession()
         {
-            Console.WriteLine($"\nPrenos završen. Ukupno primljeno {receivedCount} redova.\n");
+            Console.WriteLine($"\nPrenos zavrsen. Ukupno primljeno {receivedCount} redova.\n");
 
             sessionWriter?.Flush();
             sessionWriter?.Dispose();

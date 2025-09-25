@@ -15,8 +15,7 @@ namespace Common
             if (s == null)
                 return ValidationResult.Fail("Sample is null");
 
-            double? SafeVal(double val) =>
-                (Math.Abs(val - 32767.0) < 0.0001) ? (double?)null : val;
+            double? SafeVal(double val) => (Math.Abs(val - 32767.0) < 0.0001) ? (double?)null : val;
 
             double? acPwrt = SafeVal(s.AcPwrt);
             double? dcVolt = SafeVal(s.DcVolt);
@@ -27,7 +26,6 @@ namespace Common
             double? acCur1 = SafeVal(s.AcCur1);
             double? acVlt1 = SafeVal(s.AcVlt1);
 
-            // Pravila validacije
             if (acPwrt.HasValue && acPwrt.Value < 0)
                 return ValidationResult.Fail("AcPwrt < 0");
 

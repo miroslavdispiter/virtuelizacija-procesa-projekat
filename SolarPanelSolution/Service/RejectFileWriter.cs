@@ -48,7 +48,7 @@ namespace Service
                 {
                     writer?.Flush();
                     writer?.Dispose();
-                    Console.WriteLine("RejectFileWriter disposed!");
+                    Console.WriteLine("RejectFileWriter disposed and file closed.");
                 }
                 disposed = true;
             }

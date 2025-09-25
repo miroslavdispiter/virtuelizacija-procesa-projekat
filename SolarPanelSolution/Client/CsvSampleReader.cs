@@ -18,7 +18,7 @@ namespace Client
             using (var reader = new StreamReader(filePath))
             using (var rejected = new StreamWriter("Data/rejected_client.csv", append: false))
             {
-                string headerLine = reader.ReadLine(); // Preskoči zaglavlje
+                string headerLine = reader.ReadLine();
                 int rowCount = 0;
 
                 while (!reader.EndOfStream && rowCount < limitN)
@@ -65,7 +65,7 @@ namespace Client
                         int rowIndex = rowCount + 1;
 
                         var sample = new PvSample(day, hour, acPwrt, dcVolt, temper,
-                                                  v12, v23, v31, acCur1, acVlt1, rowIndex);
+                                                    v12, v23, v31, acCur1, acVlt1, rowIndex);
 
                         samples.Add(sample);
                         rowCount++;
